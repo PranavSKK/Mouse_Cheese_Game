@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="x-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        *{
+            padding:0;
+            margin:0;
+        }
+        .relative{
+            position:relative;
+
+        }
+        .absolute{
+            position:absolute;
+        }
+        .block{
+            box-sizing: border-box;
+            background-color: blue;
+            border: 2px solid white;
+        }
+        .element{
+            transition: all 0.5s;
+        }
+    </style>
+</head>
+<body>
+    <div class="container relative">
+
+    </div>
+    <script>
+        window.onload = function(){
+            let worldMapStr = "M,_,_,_\n"+
+                              "_,_,CT,C\n"+
+                              "_,CT,_,_\n"+
+                              "C,_,_,_"
+            
+            let assetMap = new Map()
+                assetMap.set("M","mouse.png")
+                assetMap.set("C","cheese.png")
+                assetMap.set("CT","cat.jpg")
+
+
+            let directionMap = new Map()
+                directionMap.set("U",[0,-1])
+                directionMap.set("D",[0,1])
+                directionMap.set("L",[-1,0])
+                directionMap.set("R",[1,0])
+
+            let elements = []
+            
+            function collisionHandle(){
+                
+          
+                let [mouse] = elements.filter(e => e.img.src.includes("mouse"))
+               
+                let collidingObjs = elements.filter(e => e!=mouse && e.pos.x == mouse.pos.x && e.pos.y == mouse.pos.y)     
+                
+                let [cheeseFound] = getCheeseFound()
+                
+                    if(cheeseFound){
+                        let collidingObj = cheeseFound
+                        setTimeout(()=>removeElement(collidingObj),500)
+                    }
+
+                    else if(isCatFound()){
+                        let collidingObj = mouse
+                        setTimeout(()=>removeElement(collidingObj),500) 
+                    }
+                
+                function getCheeseFound(){
+                    return collidingObjs.filter(e=>e.img.src.includes("cheese"))
+                }
+
+                function isCatFound(){
+                    return collidingObjs.filter(e=>e.img.src.includes("cat")).length   //doubt why length
+                }
+
+            
+            }
+            
+            function removeElement(element){
+                console.log(element)
+                elements = elements.filter(e=>e!=element)
+                constants.containerObj.removeChild(element.img)
+            }
+
+            function makeElement({pos,character,lencol,lenrow}){
+                img = new Image(constants.blockWidth,constants.blockHeight)
+                img.src = assetMap.get(character)
+                img.classList.add("absolute")
+                img.classList.add("element")
+
+                img.style.zIndex = 100
+                constants.containerObj.appendChild(img)
+                let obj = {
+                    pos,
+                    img,
+                    move(x,y){                            //doubt move call
+                        this.pos.x += x
+                        this.pos.y += y
+
+                        if(this.pos.x>=0  && this.pos.x<lencol && this.pos.y>=0 && this.pos.y<lenrow){
+                        this.draw()
+                        }
+
+                        else if (this.pos.x<0  || this.pos.x==lencol || this.pos.y<0 || this.pos.y==lenrow){
+                            this.pos.x=this.pos.x-x
+                            this.pos.y=this.pos.y-y
+                        }
+                    },
+                    
+                    draw(){
+                        this.img.style.left = (this.pos.x*constants.blockWidth)+"px"
+                        this.img.style.top = (this.pos.y*constants.blockHeight)+"px"
+                    }
+                }
+                obj.draw()
+                return obj
+
+            }
+
+            document.addEventListener("keydown",(e)=>{
+                const keyCode = e.keyCode
+                if(keyCode == 37){//left key
+                    moveMouse("L")
+                }
+                else if(keyCode == 38){
+                    moveMouse("U")
+                }
+                else if(keyCode == 39){
+                    moveMouse("R")
+                }                
+                else{
+                    moveMouse("D")
+                }
+            })
+
+            function moveMouse(direction){
+                let [mouse] = elements.filter(e => e.img.src.includes("mouse"))
+                let [dx,dy] = directionMap.get(direction)
+                mouse.move(dx,dy)
+                collisionHandle()
+
+            }
+
+
+            let constants = {
+                blockWidth:100,
+                blockHeight:100,
+                containerObj: document.querySelector(".container"),                
+            }
+
+            let nodes = []
+
+            function genWorldMap(stringMap){
+                let map = []
+                let rowStrings = stringMap.split("\n")
+                for (let row of rowStrings){
+                    map.push(row.split(","))
+                }
+                return map
+            }
+
+            const drawMap = (mapArr)=>{
+                // let html = ""
+                let [topOffset,leftOffset] = [0,0]
+                
+                // for(let row of mapArr){
+                for(let i=0;i<mapArr.length;i++){
+                    const row = mapArr[i]
+                    leftOffset = 0
+                    // for(let col of row){
+                    for(let j=0;j<row.length;j++){
+                        const col = row[j]
+                        let lencol=mapArr.length
+                        let lenrow=row.length
+                        if(col != "_"){
+                            
+                            elements.push(makeElement({
+                                pos
+                                :{x:j,y:i},
+                                character:col,lencol,lenrow
+                            }))
+                        }
+                        let blockObj = document.createElement("div")
+                        console.log(blockObj)
+                        blockObj.classList.add("block")
+                        blockObj.classList.add("absolute")
+
+                        blockObj.style.width = constants.blockWidth+"px"
+                        blockObj.style.height = constants.blockHeight+"px"
+                        // blockObj.style.position = "absolute"
+                        blockObj.style.top = topOffset+"px"
+                        blockObj.style.left = leftOffset+"px"
+                        leftOffset+=constants.blockWidth
+                        nodes.push(blockObj)
+                        // constants.containerObj.appendChild(blockObj)
+
+                    }
+                    topOffset += constants.blockHeight
+                }
+                constants.containerObj.append(...nodes)
+
+                
+                
+            }
+            let worldMap = genWorldMap(worldMapStr)
+            drawMap(worldMap)        
+        }
+    </script>
+
+</body>
+</html>
